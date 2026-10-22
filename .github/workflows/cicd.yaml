@@ -50,6 +50,37 @@ jobs:
         run: |
           python scripts/promote_model.py
 
+      - name: Start Flask App
+        env:
+          MLFLOW_TRACKING_URI: http://16.178.121.158:5000
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          nohup python backend/main.py > flask_app.log 2>&1 &
+          echo $! > flask_app.pid
+
+          for attempt in {1..30}; do
+            status=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+              --request POST \
+              --header "Content-Type: application/json" \
+              --data '{"sentiment_counts":{"1":1,"0":1,"-1":1}}' \
+              http://127.0.0.1:5000/generate_chart || true)
+            if [ "$status" = "200" ]; then
+              echo "Flask API is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Flask API did not become ready"
+          cat flask_app.log
+          exit 1
+
+      - name: Run Flask API tests
+        run: |
+          python -m pytest scripts/test_flask_api.py
+
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
