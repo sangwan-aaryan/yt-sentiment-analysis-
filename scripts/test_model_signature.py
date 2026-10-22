@@ -1,4 +1,5 @@
 import pickle
+import uuid
 
 import mlflow
 import mlflow.pyfunc
@@ -25,6 +26,11 @@ def test_model_signature_and_vectorizer_artifact_round_trip(tmp_path):
     database_path = (tmp_path / "mlflow.db").as_posix()
     mlflow.set_tracking_uri(f"sqlite:///{database_path}")
     try:
+        experiment_id = mlflow.create_experiment(
+            f"signature-test-{uuid.uuid4().hex}",
+            artifact_location=(tmp_path / "artifacts").as_uri(),
+        )
+        mlflow.set_experiment(experiment_id=experiment_id)
         with mlflow.start_run() as run:
             model_info = mlflow.sklearn.log_model(
                 model,
