@@ -150,9 +150,9 @@ def main():
         # Save the trained model in the root directory
         save_model(best_model, os.path.join(root_dir, 'lgbm_model.pkl'))
 
-    except Exception as e:
-        logger.error('Failed to complete the feature engineering and model building process: %s', e)
-        print(f"Error: {e}")
+    except Exception:
+        logger.exception('Failed to complete the model building process')
+        raise
 
 
 if __name__ == '__main__':

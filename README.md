@@ -3,6 +3,42 @@ yt-sentiment-analysis
 
 a chrome plugin which help to know about the youtube comments
 
+## Run the prediction API
+
+Install the project dependencies and ensure the configured MLflow server has a
+`staging` alias for `yt_chrome_plugin_model`. The model's MLflow run must also
+contain the TF-IDF vectorizer artifact logged by model evaluation.
+
+```powershell
+python -m pip install -r requirements.txt
+$env:MLFLOW_TRACKING_URI = "http://16.178.121.158:5000"
+$env:MLFLOW_MODEL_ALIAS = "staging"
+python backend/main.py
+```
+
+On first extension use, enter your YouTube Data API key in the popup. It is
+stored in Chrome's local extension storage rather than embedded in source.
+Comment retrieval follows YouTube's pagination tokens until no more top-level
+comment threads are available; analysis is sent to the API in batches. The
+YouTube API quota and any comments hidden or unavailable to that API still
+limit what can be fetched.
+
+Send comments as a JSON list:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:5000/predict `
+  -ContentType "application/json" `
+  -Body '{"comments":["This video is great","I did not like it"]}'
+```
+
+Sentiment values are the model's class labels (`-1`, `0`, or `1`). The API
+resolves the alias to one model version and loads that version's matching
+vectorizer from the same MLflow run.
+
+The `/generate_chart`, `/generate_wordcloud`, and `/generate_trend_graph`
+endpoints return PNG images for the Chrome extension to display directly.
+The extension displays the number actually analyzed and does not stop at 500.
+
 Project Organization
 ------------
 

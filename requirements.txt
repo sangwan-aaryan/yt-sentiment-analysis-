@@ -3,6 +3,20 @@
 
 # external requirements
 click
+Flask
+flask-cors
+joblib
+lightgbm
+matplotlib
+mlflow
+nltk
+numpy
+pandas
+wordcloud
+PyYAML
+scikit-learn
+seaborn
+dvc
 Sphinx
 coverage
 awscli

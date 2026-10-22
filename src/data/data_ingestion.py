@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import os
 from sklearn.model_selection import train_test_split
@@ -106,9 +105,9 @@ def main():
         # Save the split datasets and create the raw folder if it doesn't exist
         save_data(train_data, test_data, data_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../data'))
         
-    except Exception as e:
-        logger.error('Failed to complete the data ingestion process: %s', e)
-        print(f"Error: {e}")
+    except Exception:
+        logger.exception('Failed to complete the data ingestion process')
+        raise
 
 if __name__ == '__main__':
     main()
