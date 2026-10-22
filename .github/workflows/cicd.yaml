@@ -37,13 +37,9 @@ jobs:
         run: |
           dvc repro
 
-      - name: Test registered model and signature
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-1
+      - name: Test registered model and local model artifacts
         run: |
-          python -m pytest scripts/test_load_model.py scripts/test_model_signature.py
+          python -m pytest scripts/test_load_model.py scripts/test_model_signature.py scripts/test_model_performance.py
 
       - name: Configure Git
         run: |

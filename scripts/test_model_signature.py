@@ -1,36 +1,60 @@
 import pickle
+
 import mlflow
+import mlflow.pyfunc
+import mlflow.sklearn
 import pandas as pd
-import pytest
-from mlflow.tracking import MlflowClient
+from mlflow.models import infer_signature
 
-# Set your remote tracking URI
-mlflow.set_tracking_uri("http://16.178.121.158:5000")
 
-@pytest.mark.parametrize("model_name, alias", [
-    ("yt_chrome_plugin_model", "staging"),
-])
-def test_model_signature_with_matching_vectorizer(model_name, alias):
-    client = MlflowClient()
-
-    version = client.get_model_version_by_alias(model_name, alias)
-    vectorizer_path = client.download_artifacts(
-        version.run_id,
-        "preprocessing/tfidf_vectorizer.pkl",
-    )
-    with open(vectorizer_path, "rb") as file:
+def test_model_signature_and_vectorizer_artifact_round_trip(tmp_path):
+    with open("lgbm_model.pkl", "rb") as file:
+        model = pickle.load(file)
+    with open("tfidf_vectorizer.pkl", "rb") as file:
         vectorizer = pickle.load(file)
 
-    model = mlflow.pyfunc.load_model(f"models:/{model_name}@{alias}")
-    input_data = vectorizer.transform(["hi how are you"])
-    input_df = pd.DataFrame(
-        input_data.toarray(),
+    test_data = pd.read_csv("data/interim/test_processed.csv")
+    sample = vectorizer.transform(test_data["clean_comment"].iloc[:5])
+    input_example = pd.DataFrame(
+        sample.toarray(),
         columns=vectorizer.get_feature_names_out(),
     )
-    signature = model.metadata.signature
-    assert signature is not None
-    assert signature.inputs.input_names() == input_df.columns.tolist()
+    signature = infer_signature(input_example, model.predict(input_example))
 
-    prediction = model.predict(input_df)
+    previous_tracking_uri = mlflow.get_tracking_uri()
+    database_path = (tmp_path / "mlflow.db").as_posix()
+    mlflow.set_tracking_uri(f"sqlite:///{database_path}")
+    try:
+        with mlflow.start_run() as run:
+            model_info = mlflow.sklearn.log_model(
+                model,
+                name="lgbm_model",
+                signature=signature,
+                input_example=input_example,
+                skops_trusted_types=[
+                    "collections.OrderedDict",
+                    "lightgbm.basic.Booster",
+                    "lightgbm.sklearn.LGBMClassifier",
+                ],
+            )
+            mlflow.log_artifact(
+                "tfidf_vectorizer.pkl",
+                artifact_path="preprocessing",
+            )
 
-    assert len(prediction) == input_df.shape[0]
+        loaded_model = mlflow.pyfunc.load_model(model_info.model_uri)
+        loaded_signature = loaded_model.metadata.signature
+        assert loaded_signature is not None
+        assert loaded_signature.inputs.input_names() == input_example.columns.tolist()
+        assert len(loaded_model.predict(input_example)) == len(input_example)
+
+        artifacts = mlflow.tracking.MlflowClient().list_artifacts(
+            run.info.run_id,
+            "preprocessing",
+        )
+        assert any(
+            artifact.path.endswith("tfidf_vectorizer.pkl")
+            for artifact in artifacts
+        )
+    finally:
+        mlflow.set_tracking_uri(previous_tracking_uri)

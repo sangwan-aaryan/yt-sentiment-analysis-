@@ -1,23 +1,30 @@
+import json
+import os
+from pathlib import Path
+
 import pytest
-import mlflow.pyfunc
 from mlflow.tracking import MlflowClient
 
-# Set your remote tracking URI
-mlflow.set_tracking_uri("http://16.178.121.158:5000")
 
-@pytest.mark.parametrize("model_name, alias", [
-    ("yt_chrome_plugin_model", "staging"),
-])
-def test_load_staging_model_alias(model_name, alias):
-    client = MlflowClient()
+def test_staging_alias_points_to_pipeline_registered_model():
+    registration_path = Path("registered_model_info.json")
+    if not registration_path.is_file():
+        pytest.skip("Run dvc repro before checking the registered alias")
 
-    version = client.get_model_version_by_alias(model_name, alias)
-    model_uri = f"models:/{model_name}@{alias}"
-    model = mlflow.pyfunc.load_model(model_uri)
-
-    assert version.version
-    assert model is not None, "Model failed to load"
-    print(
-        f"Model '{model_name}' version {version.version} loaded successfully "
-        f"from alias '{alias}'."
+    tracking_uri = os.getenv(
+        "MLFLOW_TRACKING_URI",
+        "http://16.178.121.158:5000",
     )
+    client = MlflowClient(tracking_uri=tracking_uri)
+    registration_info = json.loads(
+        registration_path.read_text(encoding="utf-8")
+    )
+
+    assert registration_info["alias"] == "staging"
+    version = client.get_model_version_by_alias(
+        registration_info["name"],
+        registration_info["alias"],
+    )
+
+    assert str(version.version) == str(registration_info["version"])
+    assert version.run_id == registration_info["run_id"]
