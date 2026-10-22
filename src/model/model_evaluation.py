@@ -155,13 +155,20 @@ def main():
             X_test_tfidf = vectorizer.transform(test_data['clean_comment'].values)
             y_test = test_data['category'].values
 
-            # Create a DataFrame for signature inference (using first few rows as an example)
-            input_example = pd.DataFrame(X_test_tfidf.toarray()[:5], columns=vectorizer.get_feature_names_out())  # <--- Added for signature
+            if X_test_tfidf.shape[0] == 0:
+                raise ValueError("The test dataset must contain at least one row")
 
-            # Infer the signature
-            signature = infer_signature(input_example, model.predict(X_test_tfidf[:5]))  # <--- Added for signature
+            # Use the vectorizer's feature names so the signature matches API inputs.
+            input_example = pd.DataFrame(
+                X_test_tfidf[:5].toarray(),
+                columns=vectorizer.get_feature_names_out(),
+            )
+            signature = infer_signature(
+                input_example,
+                model.predict(input_example),
+            )
 
-            # Log model with signature
+            # Log the model with its named TF-IDF input schema.
             logged_model = mlflow.sklearn.log_model(
                 model,
                 name="lgbm_model",
