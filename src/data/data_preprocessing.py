@@ -77,22 +77,47 @@ def save_data(train_data: pd.DataFrame, test_data: pd.DataFrame, data_path: str)
         logger.error(f"Error occurred while saving data: {e}")
         raise
 
+
+def ensure_nltk_resources() -> None:
+    """Download and verify the NLTK corpora required by preprocessing."""
+    nltk_data_dir = os.path.join(os.path.expanduser("~"), "nltk_data")
+    os.makedirs(nltk_data_dir, exist_ok=True)
+    if nltk_data_dir not in nltk.data.path:
+        nltk.data.path.insert(0, nltk_data_dir)
+
+    resources = (
+        ("wordnet", ("corpora/wordnet", "corpora/wordnet.zip")),
+        ("stopwords", ("corpora/stopwords", "corpora/stopwords.zip")),
+    )
+    for package, resource_paths in resources:
+        if any(_nltk_resource_exists(path) for path in resource_paths):
+            continue
+
+        if not nltk.download(
+            package,
+            download_dir=nltk_data_dir,
+            quiet=True,
+        ):
+            raise RuntimeError(f"Failed to download NLTK resource: {package}")
+        if not any(_nltk_resource_exists(path) for path in resource_paths):
+            raise LookupError(
+                f"NLTK resource '{package}' was downloaded but is still unavailable "
+                f"in {nltk_data_dir}"
+            )
+
+
+def _nltk_resource_exists(resource_path: str) -> bool:
+    try:
+        nltk.data.find(resource_path)
+    except LookupError:
+        return False
+    return True
+
+
 def main():
     try:
         logger.debug("Starting data preprocessing...")
-
-        for resource_path, package in (
-            ('corpora/wordnet', 'wordnet'),
-            ('corpora/stopwords', 'stopwords'),
-        ):
-            try:
-                nltk.data.find(resource_path)
-            except LookupError:
-                if not nltk.download(package, quiet=True):
-                    raise RuntimeError(
-                        f"Failed to download NLTK resource: {package}"
-                    )
-                nltk.data.find(resource_path)
+        ensure_nltk_resources()
 
         root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 
