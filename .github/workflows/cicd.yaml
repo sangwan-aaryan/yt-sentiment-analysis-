@@ -129,6 +129,38 @@ jobs:
           docker push "$ECR_REGISTRY/yt-sentiment-comment:latest"
           docker push "$ECR_REGISTRY/yt-sentiment-comment:${GITHUB_SHA}"
 
+      - name: Prepare CodeDeploy bundle
+        if: github.ref == 'refs/heads/master'
+        run: |
+          chmod +x deploy/scripts/install_dependencies.sh deploy/scripts/start_docker.sh
+          printf '%s\n' "$GITHUB_SHA" > deploy/image-tag.txt
+          zip -j deployment.zip appspec.yml
+          zip -r deployment.zip deploy
+
+      - name: Upload CodeDeploy bundle
+        if: github.ref == 'refs/heads/master'
+        run: |
+          aws s3 cp deployment.zip \
+            "s3://campusxcodedeploybucket/deployment-${GITHUB_SHA}.zip" \
+            --region us-east-1
+
+      - name: Deploy to AWS CodeDeploy
+        if: github.ref == 'refs/heads/master'
+        run: |
+          deployment_id=$(aws deploy create-deployment \
+            --application-name YTChromePlugin \
+            --deployment-config-name CodeDeployDefault.OneAtATime \
+            --deployment-group-name YTChromePluginDeploymentGroup \
+            --s3-location "bucket=campusxcodedeploybucket,key=deployment-${GITHUB_SHA}.zip,bundleType=zip" \
+            --file-exists-behavior OVERWRITE \
+            --region us-east-1 \
+            --query deploymentId \
+            --output text)
+          echo "Waiting for CodeDeploy deployment $deployment_id"
+          aws deploy wait deployment-successful \
+            --deployment-id "$deployment_id" \
+            --region us-east-1
+
       - name: Promote model to production
         if: github.ref == 'refs/heads/master'
         env:

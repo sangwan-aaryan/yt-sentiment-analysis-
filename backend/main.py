@@ -42,6 +42,11 @@ model = None
 vectorizer = None
 
 
+@app.route("/")
+def home():
+    return "Welcome to the flask api"
+
+
 @lru_cache(maxsize=1)
 def get_stop_words():
     return set(stopwords.words("english")) - {

@@ -58,10 +58,19 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:5001/predict `
 
 The CI workflow builds and smoke-tests this image on pushes. On pushes to
 `master`, it also publishes `latest` and the commit SHA to the
-`yt-sentiment-comment` Amazon ECR repository in `ap-southeast-2`, then promotes
-the registered model. Configure the `AWS_ACCESS_KEY_ID` and
-`AWS_SECRET_ACCESS_KEY` GitHub Actions secrets with permissions for the DVC
-S3 remote and ECR, and create the ECR repository before publishing.
+`yt-sentiment-comment` Amazon ECR repository in `ap-southeast-2`, deploys that
+commit's image to EC2 using CodeDeploy, and promotes the registered model only
+after deployment succeeds.
+
+For CI/CD deployment, configure the `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY` GitHub Actions secrets with permissions for the DVC S3
+remote, ECR, the deployment bundle S3 bucket, and CodeDeploy. Create the
+`yt-sentiment-comment` ECR repository in `ap-southeast-2`, the
+`YTChromePlugin` CodeDeploy application and `YTChromePluginDeploymentGroup`
+in `us-east-1`, and the `campusxcodedeploybucket` bundle bucket in
+`us-east-1`. The EC2 instances must have the CodeDeploy agent installed, an
+instance profile that can pull from ECR, and inbound access to port 80. The
+backend must also be able to reach the configured MLflow tracking server.
 
 On first extension use, enter your YouTube Data API key in the popup. It is
 stored in Chrome's local extension storage rather than embedded in source.

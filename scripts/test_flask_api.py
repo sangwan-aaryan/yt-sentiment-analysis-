@@ -4,6 +4,12 @@ import json
 
 BASE_URL = "http://localhost:5000"  # Replace with your deployed URL if needed
 
+def test_home_endpoint():
+    response = requests.get(BASE_URL)
+    assert response.status_code == 200
+    assert response.text == "Welcome to the flask api"
+
+
 def test_predict_endpoint():
     data = {
         "comments": ["This is a great product!", "Not worth the money.", "It's okay."]
