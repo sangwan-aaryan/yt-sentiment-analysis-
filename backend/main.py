@@ -6,6 +6,8 @@ from io import BytesIO
 from collections import Counter
 from functools import lru_cache
 
+os.environ.setdefault("MLFLOW_ENABLE_PROXY_MULTIPART_DOWNLOAD", "false")
+
 import joblib
 import mlflow
 import matplotlib
