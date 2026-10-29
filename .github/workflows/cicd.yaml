@@ -141,17 +141,17 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           aws s3 cp deployment.zip \
-            "s3://campusxcodedeploybucket/deployment-${GITHUB_SHA}.zip" \
+            "s3://code-deploy-aaryan/deployment-${GITHUB_SHA}.zip" \
             --region us-east-1
 
       - name: Deploy to AWS CodeDeploy
         if: github.ref == 'refs/heads/master'
         run: |
           deployment_id=$(aws deploy create-deployment \
-            --application-name YTChromePlugin \
+            --application-name yt-chrome \
             --deployment-config-name CodeDeployDefault.OneAtATime \
-            --deployment-group-name YTChromePluginDeploymentGroup \
-            --s3-location "bucket=campusxcodedeploybucket,key=deployment-${GITHUB_SHA}.zip,bundleType=zip" \
+            --deployment-group-name yt-chrome \
+            --s3-location "bucket=code-deploy-aaryan,key=deployment-${GITHUB_SHA}.zip,bundleType=zip" \
             --file-exists-behavior OVERWRITE \
             --region us-east-1 \
             --query deploymentId \
@@ -159,7 +159,7 @@ jobs:
           echo "Waiting for CodeDeploy deployment $deployment_id"
           aws deploy wait deployment-successful \
             --deployment-id "$deployment_id" \
-            --region us-east-1
+            --region ap-southeast-2
 
       - name: Promote model to production
         if: github.ref == 'refs/heads/master'
