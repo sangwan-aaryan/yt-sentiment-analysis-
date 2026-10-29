@@ -142,7 +142,7 @@ jobs:
         run: |
           aws s3 cp deployment.zip \
             "s3://code-deploy-aaryan/deployment-${GITHUB_SHA}.zip" \
-            --region us-east-1
+            --region ap-southeast-2
 
       - name: Deploy to AWS CodeDeploy
         if: github.ref == 'refs/heads/master'
@@ -153,7 +153,7 @@ jobs:
             --deployment-group-name yt-chrome \
             --s3-location "bucket=code-deploy-aaryan,key=deployment-${GITHUB_SHA}.zip,bundleType=zip" \
             --file-exists-behavior OVERWRITE \
-            --region us-east-1 \
+            --region ap-southeast-2 \
             --query deploymentId \
             --output text)
           echo "Waiting for CodeDeploy deployment $deployment_id"
