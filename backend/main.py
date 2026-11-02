@@ -47,6 +47,37 @@ def home():
     return "Welcome to the flask api"
 
 
+@app.route("/health")
+def health():
+    """Frontend status chip. /health?warm=1 also preloads the MLflow model."""
+    if request.args.get("warm") == "1":
+        try:
+            get_model_and_vectorizer()
+        except Exception:
+            logger.exception("Model warm-up failed")
+            return jsonify({"status": "error", "model_loaded": False}), 503
+    return jsonify({
+        "status": "ok",
+        "model": MODEL_NAME,
+        "alias": MODEL_ALIAS,
+        "model_loaded": model is not None and vectorizer is not None,
+    })
+
+
+
+    return jsonify([
+        {
+            "comment": comment,
+            "sentiment": sentiment,
+            "timestamp": item["timestamp"],
+            "scored": bool(preprocess_comment(comment).strip()),
+        }
+        for comment, sentiment, item in zip(
+            comments, predictions, comments_data
+        )
+    ])
+
+
 @lru_cache(maxsize=1)
 def get_stop_words():
     return set(stopwords.words("english")) - {
